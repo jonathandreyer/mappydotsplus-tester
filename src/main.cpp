@@ -121,6 +121,7 @@ void process_new_value(unsigned int v) {
 
 unsigned int process_avg(unsigned int v) {
     static unsigned int idx = 0;
+    static unsigned int qty = 0;
     static unsigned int avg[AVG_SIZE] = {0};
 
     unsigned long average;
@@ -128,13 +129,19 @@ unsigned int process_avg(unsigned int v) {
     //Store value in array
     avg[idx] = v;
 
+    //Update initial counter
+    qty++;
+    if (qty>=AVG_SIZE) {
+      qty = AVG_SIZE;
+    }
+
     //Compute average
-    for (unsigned int i = 0; i < AVG_SIZE; i++) {
+    for (unsigned int i = 0; i < qty; i++) {
       average += avg[i];
     }
-    average = average / AVG_SIZE;
+    average = average / qty;
 
-    // Update index of array
+    //Update index of array
     idx++;
     if(idx > (AVG_SIZE-1)) {
       idx = 0;
