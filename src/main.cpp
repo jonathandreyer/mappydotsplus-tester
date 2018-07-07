@@ -12,7 +12,7 @@
 #define LONG_RANGE                  (0x6c)
 
 /* Others */
-#define AVG_SIZE                    100
+#define AVG_SIZE                    25
 #define UPDATE_TIME_DISPLAY         100
 #define UPDATE_TIME_SERIAL          500
 
