@@ -1,15 +1,7 @@
+#include <Arduino.h>
+#include <TFmini.h>
 #include <Wire.h>
 #include <SeeedOLED.h>
-
-
-/* Basics */
-#define SET_CONTINUOUS_RANGING_MODE (0x63)
-#define RANGING_MEASUREMENT_MODE    (0x6d)
-
-/* Ranging Modes */
-#define SHORT_RANGE                 (0x73)
-#define MED_RANGE                   (0x6d)
-#define LONG_RANGE                  (0x6c)
 
 /* Others */
 #define AVG_SIZE                    25
@@ -27,8 +19,13 @@ unsigned int min_value = 50000;
 unsigned int max_value = 0;
 unsigned int average_value;
 
+unsigned int distance;
+unsigned int strength;
+unsigned int integration_time;
+
+TFmini tfmini;
+
 /* Prototype */
-unsigned int read_distance();
 void process_new_value(unsigned int);
 unsigned int process_avg(unsigned int);
 void serial_print();
@@ -59,15 +56,9 @@ void setup() {
     SeeedOled.setTextXY(6,0);           //Set the cursor to 0th Page, 0th Column
     SeeedOled.putString("Avg.:  ");//Print the String
 
-    // Init. MappyDots
-    Wire.beginTransmission(address);
-    Wire.write(SET_CONTINUOUS_RANGING_MODE);
-    Wire.endTransmission();
-
-    Wire.beginTransmission(address);
-    Wire.write(RANGING_MEASUREMENT_MODE);
-    Wire.write(LONG_RANGE);
-    Wire.endTransmission();
+    // Init. TFmini
+    Serial3.begin(115200);
+    tfmini.attach(Serial3);
 
     Serial.println("Init. OK");
 }
@@ -77,8 +68,17 @@ void loop() {
     unsigned long time = millis();
 
     // Read distance
-    unsigned int distance = read_distance();
-    process_new_value(distance);
+    if (tfmini.available())
+    {
+        distance = tfmini.getDistance();
+        strength = tfmini.getStrength();
+        integration_time = tfmini.getIntegrationTime();
+        if (distance > 10000)
+        {
+            distance = 10000;
+        }
+        process_new_value(distance);
+    }
 
     //Update display
     if (time > (time_last_display+UPDATE_TIME_DISPLAY)) {
@@ -97,14 +97,6 @@ void loop() {
 }
 
 /* Functions */
-unsigned int read_distance() {
-    unsigned int distance;
-    Wire.requestFrom(address, 2);
-    distance = Wire.read() << 8;
-    distance |= Wire.read();
-    return distance;
-}
-
 void process_new_value(unsigned int v) {
     actual_value = v;
 
@@ -124,7 +116,7 @@ unsigned int process_avg(unsigned int v) {
     static unsigned int qty = 0;
     static unsigned int avg[AVG_SIZE] = {0};
 
-    unsigned long average;
+    float average = 0;
 
     //Store value in array
     avg[idx] = v;
@@ -137,9 +129,9 @@ unsigned int process_avg(unsigned int v) {
 
     //Compute average
     for (unsigned int i = 0; i < qty; i++) {
-      average += avg[i];
+      average += float(avg[i]);
     }
-    average = average / qty;
+    average = average / (qty*1.0);
 
     //Update index of array
     idx++;
@@ -147,10 +139,18 @@ unsigned int process_avg(unsigned int v) {
       idx = 0;
     }
 
-    return average;
+    return (unsigned int)average;
 }
 
 void serial_print() {
+    /*Serial.print("distance : ");
+    Serial.print(distance);
+    Serial.print(", strength : ");
+    Serial.print(strength);
+    Serial.print(", integration : ");
+    Serial.print(integration_time);
+    Serial.print(", ");*/
+
     Serial.print("actual : ");
     Serial.print(actual_value);
     Serial.print(", min : ");
@@ -168,25 +168,25 @@ void update_display() {
 
     SeeedOled.setTextXY(0,0);
     SeeedOled.putString("Value: ");
-    sprintf(cstr, "%4d", actual_value);
+    sprintf(cstr, "%6u", actual_value);
     SeeedOled.putString(cstr);
-    SeeedOled.putString("mm");
+    SeeedOled.putString("cm");
 
     SeeedOled.setTextXY(2,0);
     SeeedOled.putString("Min.:  ");
-    sprintf(cstr, "%4d", min_value);
+    sprintf(cstr, "%6u", min_value);
     SeeedOled.putString(cstr);
-    SeeedOled.putString("mm");
+    SeeedOled.putString("cm");
 
     SeeedOled.setTextXY(4,0);
     SeeedOled.putString("Max.:  ");
-    sprintf(cstr, "%4d", max_value);
+    sprintf(cstr, "%6u", max_value);
     SeeedOled.putString(cstr);
-    SeeedOled.putString("mm");
+    SeeedOled.putString("cm");
 
     SeeedOled.setTextXY(6,0);
     SeeedOled.putString("Avg.:  ");
-    sprintf(cstr, "%4d", average_value);
+    sprintf(cstr, "%6u", average_value);
     SeeedOled.putString(cstr);
-    SeeedOled.putString("mm");
+    SeeedOled.putString("cm");
 }
