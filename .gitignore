@@ -1,4 +1,12 @@
+# PlatformIO
+.pio
 .pioenvs
 .piolibdeps
 .clang_complete
 .gcc-flags.json
+
+# VSCode
+.vscode
+
+# System file
+.DS_Store
